@@ -11,6 +11,27 @@ import "github.com/tggo/goRDFlib/rdfxml"
 //import "sort"
 
 
+type ClassInfo struct {
+	IRI rdf.URIRef
+	Parents []rdf.URIRef
+	Children []rdf.URIRef
+	Outgoing []rdf.Triple
+	Incoming []rdf.Triple
+}
+
+func NewClassInfo(g *rdf.Graph, iri rdf.URIRef) ClassInfo {
+	return ClassInfo{
+		IRI: iri,
+		Parents: getNamedParents(g, iri),
+		Children: getNamedChildren(g, iri),
+		Outgoing: getOutgoing(g, iri),
+		Incoming: getIncoming(g, iri),
+	}
+}
+
+
+
+
 func loadRDF(path string) (*rdf.Graph, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -90,7 +111,7 @@ func getNamedParents(g *rdf.Graph, class rdf.URIRef) []rdf.URIRef {
 	for triple := range g.Triples(class, &rdf.RDFS.SubClassOf, nil) {
 		iri, ok := triple.Object.(rdf.URIRef)
 		if !ok {
-			log.Printf("Skipping anonymous node: %s", triple.Subject.N3())
+			log.Printf("Skipping anonymous node: %s", triple.Object.N3())
 			continue
 		}
 		resultClasses = append(resultClasses, iri)
@@ -161,6 +182,10 @@ func main() {
 		fmt.Print(child.Fragment() + " ")
 	}
 	fmt.Println()
+
+
+	fmt.Println(">>> CLASS INFO <<<")
+	fmt.Println(NewClassInfo(triples, hardwareuri))
 
 
 	//normalize := func (a string) string {
