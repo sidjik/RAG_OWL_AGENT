@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xml:base="https://example.org/demo/">
+  <owl:Ontology rdf:about="https://example.org/demo/"/>
+  <owl:Class rdf:about="Hardware">
+    <rdfs:label xml:lang="en">Hardware</rdfs:label>
+    <rdfs:label xml:lang="ru">Оборудование</rdfs:label>
+  </owl:Class>
+  <owl:Class rdf:about="Computer">
+    <rdfs:subClassOf rdf:resource="Hardware"/>
+    <rdfs:subClassOf>
+      <owl:Restriction>
+        <owl:onProperty rdf:resource="hasComponent"/>
+        <owl:someValuesFrom rdf:resource="Hardware"/>
+      </owl:Restriction>
+    </rdfs:subClassOf>
+  </owl:Class>
+  <owl:ObjectProperty rdf:about="hasComponent"/>
+</rdf:RDF>

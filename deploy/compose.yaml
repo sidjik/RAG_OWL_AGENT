@@ -1,0 +1,5 @@
+# Compatibility entrypoint. Prefer `docker compose` from the repository root.
+# Requires Docker Compose >= 2.20.3 for include.
+name: owl-graphrag
+include:
+  - ../compose.yaml

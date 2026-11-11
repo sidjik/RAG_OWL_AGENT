@@ -1,0 +1,123 @@
+name: owl-graphrag
+
+# All ${...} values are read from the root .env by Docker Compose.
+# Provider credentials are passed only to LiteLLM; MCP services receive the proxy key.
+x-proxy-client: &proxy-client
+  LITELLM_BASE_URL: http://litellm:4000/v1
+  LITELLM_API_KEY: ${LITELLM_MASTER_KEY:?Set LITELLM_MASTER_KEY in .env}
+  EMBEDDING_BACKEND: litellm
+  EMBEDDING_MODEL: embeddings
+
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:v1.106.6
+    command: ["--config", "/app/config.yaml", "--host", "0.0.0.0", "--port", "4000"]
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?Set LITELLM_MASTER_KEY in .env}
+      CHAT_UPSTREAM_MODEL: ${CHAT_UPSTREAM_MODEL:?Set CHAT_UPSTREAM_MODEL in .env}
+      CHAT_API_KEY: ${CHAT_API_KEY:-}
+      CHAT_API_BASE: ${CHAT_API_BASE:-}
+      EMBEDDING_UPSTREAM_MODEL: ${EMBEDDING_UPSTREAM_MODEL:?Set EMBEDDING_UPSTREAM_MODEL in .env}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_API_BASE: ${EMBEDDING_API_BASE:-}
+      LITELLM_TELEMETRY: "False"
+    ports:
+      - "127.0.0.1:4000:4000"
+    volumes:
+      - ./deploy/litellm/config.yaml:/app/config.yaml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      # This probe checks readiness without sending a billable model request.
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/readiness', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  qdrant:
+    image: qdrant/qdrant:v1.20.0
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      # The upstream Debian image includes bash, but does not include curl.
+      test:
+        - CMD
+        - bash
+        - -ec
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/6333;
+          printf 'GET /readyz HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3;
+          grep -q '^HTTP/1\.[01] 200 ' <&3
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  owl-mcp:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    command:
+      - owl-mcp
+      - --ontology
+      - "${ONTOLOGY_ID:-demo}=/app/ontology"
+      - --format
+      - "${ONTOLOGY_FORMAT:-xml}"
+      - --transport
+      - streamable-http
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8001"
+    environment:
+      <<: *proxy-client
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "127.0.0.1:8001:8001"
+    volumes:
+      - type: bind
+        source: ${ONTOLOGY_PATH:-./examples/ontologies/minimal.owl}
+        target: /app/ontology
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      litellm:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+
+  knowledge-mcp:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    command:
+      - knowledge-mcp
+      - --transport
+      - streamable-http
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8002"
+    environment:
+      <<: *proxy-client
+      QDRANT_URL: http://qdrant:6333
+      HYDE_MODEL: chat
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+    ports:
+      - "127.0.0.1:8002:8002"
+    depends_on:
+      litellm:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+
+volumes:
+  qdrant_data:

@@ -1,0 +1,77 @@
+minimum_pre_commit_version: '4.0.0'
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+
+  # Scan the whole repository; lock-file hashes are not secret material.
+  # Do not copy a baseline from another project or baseline new findings automatically.
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        # A reference to an environment variable is not a literal API key.
+        args: [--no-verify, --exclude-secrets, '^os\.environ/[A-Z][A-Z0-9_]*$']
+        exclude: ^uv\.lock$
+
+  - repo: local
+    hooks:
+      - id: forbid-secret-files
+        name: Block private environment and credential files
+        language: fail
+        entry: Private env/key files must stay local; commit .env.example with placeholders instead.
+        files: '(^|/)\.env($|\.)|(^|/)(id_(rsa|dsa|ecdsa|ed25519)|[^/]+\.(key|p12|pfx|jks|keystore))$'
+        exclude: '(^|/)\.env(?:\.[^/]+)?\.example$'
+      # Complements entropy detection for recognizable key prefixes, including Tavily.
+      - id: known-key-formats
+        name: Detect LiteLLM, provider, Tavily and RunPod key formats
+        language: pygrep
+        entry: '\b(sk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{16,}|tvly-(?:dev-|prod-)?[A-Za-z0-9_-]{16,}|rpa_[A-Za-z0-9]{20,})\b'
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.3
+    hooks:
+      - id: ruff-check
+      - id: ruff-format
+        args: [--check]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.3.0
+    hooks:
+      - id: mypy
+        pass_filenames: false
+        files: ^src/
+        args: [--config-file=pyproject.toml, src/owl_rag]
+        additional_dependencies:
+          - pydantic==2.14.2
+          # Type-check against the NumPy line that also supports Python 3.11.
+          - numpy==2.4.6
+          - rdflib==7.6.0
+          - qdrant-client==1.20.0
+          - mcp==1.30.0
+          - httpx==0.28.1
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.4
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml, -ll]
+        additional_dependencies: ['bandit[toml]']
+        files: ^src/
+
+  - repo: https://github.com/AleksaC/hadolint-py
+    rev: v2.12.1b3
+    hooks:
+      - id: hadolint
+        files: ^deploy/Dockerfile$

@@ -1,0 +1,24 @@
+# Public aliases remain stable when upstream providers or models change.
+model_list:
+  - model_name: chat
+    litellm_params:
+      model: os.environ/CHAT_UPSTREAM_MODEL
+      api_key: os.environ/CHAT_API_KEY
+      api_base: os.environ/CHAT_API_BASE
+    model_info:
+      mode: chat
+
+  - model_name: embeddings
+    litellm_params:
+      model: os.environ/EMBEDDING_UPSTREAM_MODEL
+      api_key: os.environ/EMBEDDING_API_KEY
+      api_base: os.environ/EMBEDDING_API_BASE
+    model_info:
+      mode: embedding
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+
+litellm_settings:
+  request_timeout: 60
+  num_retries: 1

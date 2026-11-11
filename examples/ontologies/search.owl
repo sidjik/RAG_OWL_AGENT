@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+         xml:base="https://example.org/search/">
+  <owl:Class rdf:about="GraphDatabase">
+    <rdfs:label xml:lang="en">Graph database</rdfs:label>
+    <rdfs:label xml:lang="ru">Графовая база данных</rdfs:label>
+    <skos:altLabel xml:lang="en">Network storage</skos:altLabel>
+    <rdfs:comment xml:lang="en">Stores vertices and edges for relationship queries.</rdfs:comment>
+  </owl:Class>
+  <owl:Class rdf:about="VectorDatabase">
+    <rdfs:label xml:lang="en">Vector database</rdfs:label>
+    <rdfs:comment xml:lang="en">Stores embedding vectors for semantic retrieval.</rdfs:comment>
+  </owl:Class>
+  <owl:Class rdf:about="ManagedVectorDatabase">
+    <rdfs:subClassOf rdf:resource="VectorDatabase"/>
+    <rdfs:comment xml:lang="en">Hosted vector storage.</rdfs:comment>
+    <rdfs:subClassOf>
+      <owl:Restriction>
+        <owl:onProperty rdf:resource="storesEmbedding"/>
+        <rdfs:label xml:lang="en">HiddenRestriction</rdfs:label>
+      </owl:Restriction>
+    </rdfs:subClassOf>
+  </owl:Class>
+  <owl:Class rdf:about="https://other.example/GraphDatabase"/>
+  <owl:ObjectProperty rdf:about="storesEmbedding">
+    <rdfs:comment xml:lang="en">Stores an embedding in a database.</rdfs:comment>
+  </owl:ObjectProperty>
+  <owl:NamedIndividual rdf:about="VectorService">
+    <rdf:type rdf:resource="ManagedVectorDatabase"/>
+    <rdfs:label xml:lang="en">Hosted vector service</rdfs:label>
+  </owl:NamedIndividual>
+</rdf:RDF>
