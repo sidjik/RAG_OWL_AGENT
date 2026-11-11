@@ -1,68 +1,68 @@
-# План базы PDF-статей
+# PDF paper library plan
 
-**Статус: следующий отдельный компонент. PDF-парсер, индекс статей и инструменты
-поиска по PDF пока не реализованы; ниже подобрана начальная библиография.**
+**Status: a separate upcoming component. The PDF parser, paper index and PDF search
+tools are not implemented yet; the initial bibliography is listed below.**
 
-Задача — дать агенту возможность объяснять AI-подходы, которые встречаются в
-онтологии или используются в проекте: найти статью, извлечь подходящий фрагмент
-и сослаться на документ и страницу.
+The goal is to let the agent explain AI methods that appear in an ontology or are
+used in this project: find a paper, retrieve a relevant passage and cite the document
+and page.
 
-## Два вида источников
+## Two types of sources
 
-- **Онтология** подтверждает явно заданные классы, связи и аксиомы.
-- **Статьи** предоставляют описание алгоритмов, предпосылок, экспериментов и
-  ограничений методов. Утверждение статьи не становится аксиомой онтологии.
+- **Ontologies** support explicitly asserted classes, relationships and axioms.
+- **Papers** describe algorithms, assumptions, experiments and method limitations.
+  A statement in a paper does not become an ontology axiom.
 
-Агент сможет сначала найти подход в онтологии, затем вызвать поиск по публикациям
-для уточнения его устройства. В ответе пользователь должен видеть, какая часть
-подтверждается онтологией, а какая — статьёй.
+The agent will be able to find a method in the ontology and then search publications
+to explain how it works. Answers should make clear which parts are supported by the
+ontology and which by a paper.
 
-## Начальная подборка
+## Initial reading list
 
-Год в таблице соответствует первой версии на arXiv. Ссылки фиксируют конкретные
-версии публикаций, чтобы будущий индекс и ссылки на страницы были воспроизводимы.
+Years correspond to the first arXiv version. ArXiv links pin specific publication
+versions so the future index and page references can be reproduced.
 
-| Публикация | Для чего пригодится |
+| Publication | Relevance |
 | --- | --- |
-| [Lewis et al., Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks, 2020, v4](https://arxiv.org/abs/2005.11401v4) | Базовая архитектура retrieval-augmented generation |
-| [Yao et al., ReAct: Synergizing Reasoning and Acting in Language Models, 2022, v3](https://arxiv.org/abs/2210.03629v3) | Чередование работы модели и действий через внешние инструменты |
-| [Edge et al., From Local to Global: A Graph RAG Approach to Query-Focused Summarization, 2024, v2](https://arxiv.org/abs/2404.16130v2) | Графовый индекс текстового корпуса и ответы на глобальные вопросы |
-| [Vaswani et al., Attention Is All You Need, 2017, v7](https://arxiv.org/abs/1706.03762v7) | Transformer и механизм attention |
-| [Reimers и Gurevych, Sentence-BERT, 2019, v1](https://arxiv.org/abs/1908.10084v1) | Embeddings предложений и поиск по сходству |
-| [Malkov и Yashunin, Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs, 2016, v4](https://arxiv.org/abs/1603.09320v4) | HNSW как метод приближённого поиска соседей для векторов |
-| [Gao et al., Precise Zero-Shot Dense Retrieval without Relevance Labels, 2022 / ACL 2023](https://aclanthology.org/2023.acl-long.99/) | HyDE: генерация гипотетического документа для поиска реальных фрагментов |
+| [Lewis et al., Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks, 2020, v4](https://arxiv.org/abs/2005.11401v4) | Basic retrieval-augmented generation architecture |
+| [Yao et al., ReAct: Synergizing Reasoning and Acting in Language Models, 2022, v3](https://arxiv.org/abs/2210.03629v3) | Alternating model reasoning and actions through external tools |
+| [Edge et al., From Local to Global: A Graph RAG Approach to Query-Focused Summarization, 2024, v2](https://arxiv.org/abs/2404.16130v2) | Graph indexing of a text corpus and answers to global questions |
+| [Vaswani et al., Attention Is All You Need, 2017, v7](https://arxiv.org/abs/1706.03762v7) | Transformers and the attention mechanism |
+| [Reimers and Gurevych, Sentence-BERT, 2019, v1](https://arxiv.org/abs/1908.10084v1) | Sentence embeddings and similarity retrieval |
+| [Malkov and Yashunin, Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs, 2016, v4](https://arxiv.org/abs/1603.09320v4) | HNSW for approximate nearest-neighbor vector search |
+| [Gao et al., Precise Zero-Shot Dense Retrieval without Relevance Labels, 2022 / ACL 2023](https://aclanthology.org/2023.acl-long.99/) | HyDE: generating a hypothetical document to retrieve actual passages |
 
-Работа Edge et al. извлекает граф из текстов. Наш OWL GraphRAG использует уже
-заданную онтологию; выбранные методы из статьи потребуют отдельной оценки применимости.
+Edge et al. extract a graph from text. This OWL GraphRAG project uses an existing
+ontology; methods taken from that paper will need a separate applicability evaluation.
 
-## План реализации
+## Implementation plan
 
-1. **Реестр документов:** `document_id`, заголовок, авторы, версия публикации,
-   исходный URL, локальный путь и SHA-256 PDF.
-2. **Извлечение текста:** сохранять страницы и разбиение документа. Первый этап —
-   PDF с текстовым слоем; OCR сканов и понимание изображений, формул и таблиц —
-   отдельное расширение. Если текст не извлечён, явно сообщать об этом.
-3. **Фрагменты:** разбивать текст на части с `chunk_id`, ссылкой на документ,
-   диапазоном страниц и положением в извлечённом тексте. Использовать номера
-   страниц PDF с единицы, отличая их от напечатанной нумерации статьи.
-4. **Поиск:** использовать уже добавленный Qdrant-адаптер и коллекцию внешних
-   документов; затем добавить BM25 и объединение результатов для PDF.
-5. **MCP-инструменты:** расширить Knowledge MCP: `search_knowledge` и `hyde_search`
-   уже принимают фильтр `source_type=pdf`, но PDF-загрузчик ещё не реализован.
-   Добавить `get_paper_passage` для получения фрагмента с окружающим контекстом.
-6. **Агент:** выбирать между инструментами онтологии и статей; формировать ссылки
-   на страницу и публикацию. Похожее название метода не считается доказательством
-   связи с конкретной OWL-сущностью; такие связи фиксируются отдельно и явно.
-7. **Оценка:** подготовить вопросы с ожидаемыми фрагментами и страницами; проверять
-   качество извлечения, поиска и точность источников в ответе.
+1. **Document registry:** `document_id`, title, authors, publication version,
+   source URL, local path and PDF SHA-256.
+2. **Text extraction:** preserve pages and document structure. Start with PDFs
+   containing a text layer; OCR for scanned pages and interpretation of images,
+   formulas and tables are separate extensions. Report failures to extract text.
+3. **Chunks:** split text into passages with `chunk_id`, a document reference,
+   page range and position in the extracted text. Use one-based PDF page numbers,
+   distinguishing them from page numbers printed in the paper.
+4. **Search:** reuse the Qdrant adapter and external-document collection, then
+   add BM25 and result fusion for PDFs.
+5. **MCP tools:** extend Knowledge MCP. `search_knowledge` and `hyde_search`
+   already accept `source_type=pdf`, but PDF ingestion is not implemented yet.
+   Add `get_paper_passage` to retrieve a passage with surrounding context.
+6. **Agent:** choose between ontology and paper tools, and cite pages and
+   publications. A similar method name is not evidence of a connection to a
+   specific OWL entity; record such connections separately and explicitly.
+7. **Evaluation:** prepare questions with expected passages and pages, then check
+   extraction quality, retrieval quality and source accuracy in answers.
 
-Планируемый поток:
+Planned flow:
 
 ```text
-PDF → текст по страницам → фрагменты с источниками → BM25 / vector index
-                                                        ↑
-Agent → MCP-клиент → инструменты поиска по статьям ───────┘
+PDF → text per page → chunks with provenance → BM25 / vector index
+                                                       ↑
+Agent → MCP client → paper search tools ────────────────┘
 ```
 
-Загрузчик PDF и инструменты статей будут отдельным компонентом: универсальное
-ядро OWL-сервера сохранит независимость от форматов научных публикаций.
+PDF ingestion and paper tools will form a separate component so the general-purpose
+OWL server core remains independent of scientific publication formats.

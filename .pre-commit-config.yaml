@@ -61,6 +61,9 @@ repos:
           - qdrant-client==1.20.0
           - mcp==1.30.0
           - httpx==0.28.1
+          - langgraph==1.2.20
+          - fastapi==0.162.4
+          - uvicorn==0.54.0
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.9.4

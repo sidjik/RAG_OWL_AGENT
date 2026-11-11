@@ -1,6 +1,6 @@
-# Проверки перед коммитом
+# Checks before committing
 
-Зависимости для разработки устанавливаются вместе с проектом:
+Install development dependencies with the project:
 
 ```bash
 uv sync --locked
@@ -8,50 +8,50 @@ uv run pre-commit install
 uv run pre-commit run --all-files
 ```
 
-Короткие команды: `make hooks` устанавливает Git-хук, `make pre-commit` проверяет
-весь репозиторий. Установка хука нужна в каждом новом локальном клоне.
-После установки `git commit` запускает проверки добавленных в коммит файлов.
+Shortcuts: `make hooks` installs the Git hook, and `make pre-commit` checks the
+entire repository. Install the hook in each new local clone. Once installed,
+`git commit` runs checks on the files staged for that commit.
 
-## Набор проверок
+## Check suite
 
-Конфигурация находится в [.pre-commit-config.yaml](../.pre-commit-config.yaml).
+The configuration lives in [.pre-commit-config.yaml](../.pre-commit-config.yaml).
 
-| Проверка | Назначение |
+| Check | Purpose |
 | --- | --- |
-| detect-secrets | Поиск ключей, токенов и подозрительных секретных значений во всём репозитории |
-| known-key-formats | Дополнительные шаблоны LiteLLM / provider `sk-`, Tavily `tvly-` и RunPod `rpa_` |
-| forbid-secret-files | Блокировка `.env`, `.env.local` и приватных credential-файлов, включая принудительный `git add -f` |
-| detect-private-key | Поиск содержимого приватных ключей |
-| Ruff | Линтинг Python и проверка форматирования; версия совпадает с uv.lock |
-| MyPy | Проверка типов приложения в `src/owl_rag` |
-| Bandit | Проверка Python-кода на распространённые проблемы безопасности |
-| Hadolint | Проверка `deploy/Dockerfile` |
-| Общие проверки | YAML/TOML, конфликтные маркеры, файлы более 1000 КБ, пробелы и конец файла |
+| detect-secrets | Find keys, tokens and suspicious secret values throughout the repository |
+| known-key-formats | Additional patterns for LiteLLM / provider `sk-`, Tavily `tvly-` and RunPod `rpa_` keys |
+| forbid-secret-files | Block `.env`, `.env.local` and private credential files, including files staged with `git add -f` |
+| detect-private-key | Detect private-key contents |
+| Ruff | Python linting and formatting checks; the version matches uv.lock |
+| MyPy | Type checking for the application in `src/owl_rag` |
+| Bandit | Check Python code for common security issues |
+| Hadolint | Check `deploy/Dockerfile` |
+| General checks | YAML/TOML, merge markers, files larger than 1000 KB, whitespace and file endings |
 
-Параметры Ruff, MyPy и Bandit задаются в [pyproject.toml](../pyproject.toml).
-Pre-commit устанавливает изолированные окружения инструментов; первый запуск
-требует доступа к GitHub и PyPI. Тесты запускаются отдельно: `make test`.
+Ruff, MyPy and Bandit settings live in [pyproject.toml](../pyproject.toml).
+Pre-commit installs isolated tool environments; the first run requires access to
+GitHub and PyPI. Run tests separately with `make test`.
 
-## Ключи и локальные настройки
+## Keys and local settings
 
-Настоящие ключи храните в локальном `.env`. `.gitignore` исключает также
-варианты `.env.*`. Шаблоны `.env.example` и `.env.production.example` разрешены
-по имени и проходят сканирование содержимого вместе с остальными файлами.
+Keep real keys in a local `.env`. `.gitignore` also excludes `.env.*` variants.
+Templates such as `.env.example` and `.env.production.example` are allowed by
+filename and have their contents scanned alongside the rest of the repository.
 
-Хук блокирует файлы `id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`, а также
-расширения `.key`, `.p12`, `.pfx`, `.jks`, `.keystore`. PEM-файлы проверяются
-по содержимому через detect-private-key. Такие же шаблоны `.env.*` исключены
-из Docker build context.
+The hook blocks files named `id_rsa`, `id_dsa`, `id_ecdsa` and `id_ed25519`,
+and extensions `.key`, `.p12`, `.pfx`, `.jks` and `.keystore`. PEM files are checked
+by content through detect-private-key. The same `.env.*` patterns are excluded
+from the Docker build context.
 
-`uv.lock` исключён из detect-secrets из-за большого количества хешей;
-дополнительная проверка известных форматов ключей применяется и к нему.
-Detect-secrets работает с `--no-verify`: найденные значения не отправляются
-провайдерам для проверки работоспособности ключа. Из детекции исключены точные
-выражения вида `os.environ/CHAT_API_KEY`, которые ссылаются на переменные окружения.
-Для нового проекта baseline секретов не нужен. Если сканер сообщил о находке,
-проверьте указанный файл локально и замените настоящий секрет ссылкой на
-переменную окружения. Исключения для ложных срабатываний должны относиться
-к конкретному проверенному примеру.
+`uv.lock` is excluded from detect-secrets because it contains many hashes;
+the additional known-key-format check still applies to it. Detect-secrets uses
+`--no-verify`, so discovered values are not sent to providers to test whether a key
+works. Exact expressions such as `os.environ/CHAT_API_KEY` are excluded from
+detection because they reference environment variables.
 
-Хуки помогают находить секреты до коммита, но набор детекторов не распознаёт
-абсолютно все возможные виды credentials.
+This project does not need a secrets baseline. If a scanner reports a finding,
+inspect the file locally and replace any real secret with an environment-variable
+reference. False-positive exceptions should apply to a specific reviewed example.
+
+Hooks help catch secrets before a commit, but the detectors cannot recognize every
+possible type of credential.

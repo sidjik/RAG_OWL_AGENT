@@ -1,43 +1,50 @@
-# Итерации до демонстрируемого проекта
+# Iterations toward a demonstrable project
 
-## 1. Python retrieval и MCP — текущая
+## 1. Python retrieval and MCP — implemented
 
-- RDFLib: RDF/XML, Turtle, N-Triples, источники и версии.
-- BM25, Qdrant, RRF, ограниченный обход графа.
-- OWL MCP и отдельный Knowledge MCP.
-- HyDE как поисковое расширение без записи гипотезы в знания.
-- Web-search с индексацией извлечённых страниц и метаданными.
-- CLI, Compose для LiteLLM, Qdrant и MCP, `.env.example`, тесты без платных API.
+- RDFLib: RDF/XML, Turtle, N-Triples, source provenance and versions.
+- BM25, Qdrant, RRF and bounded graph traversal.
+- OWL MCP and a separate Knowledge MCP.
+- HyDE as query expansion without storing the hypothesis as knowledge.
+- Web search with indexing of extracted pages and metadata.
+- CLI, Compose for LiteLLM, Qdrant and MCP, `.env.example`, and tests without paid APIs.
 
-Критерий: MCP-клиент получает подтверждающие RDF-тройки и реальные документы;
-повторная индексация URL не создаёт дубликаты, scope не смешивает источники.
+Acceptance criterion: an MCP client retrieves supporting RDF triples and actual
+documents. Reindexing a URL creates no duplicate chunks, and query scopes keep
+sources isolated.
 
-## 2. Агент и пользовательский путь
+## 2. Agent and user workflow — implemented, live-provider validation pending
 
-- LangGraph ReAct через LiteLLM; обнаружение инструментов обоих MCP-серверов.
-- Ограничения шагов, таймаутов, количества веб-страниц и объёма результатов.
-- Правила обращения к внешнему тексту как к данным, сохранение source при ответе.
-- FastAPI: совместимый chat API, потоковая выдача для Open WebUI.
-- Добавить Open WebUI и агента к существующему Compose, проверить вопрос → tools → ответ.
+- LangGraph ReAct through LiteLLM, with tool discovery from both MCP servers.
+- Limits on steps, timeouts, web page counts and result sizes.
+- Treat external text as data and retain source provenance in answers.
+- FastAPI: compatible chat API and streaming responses for Open WebUI.
+- Add Open WebUI and the agent to Compose; verify question → tools → answer.
 
-Критерий: пользователь получает ответ со ссылками и видит недостаточность
-источников, если подтверждений нет. Агент выбирает HyDE и web-search по ситуации.
+Implemented: scoped MCP discovery, a bounded LangGraph loop, source references,
+authenticated text chat API, SSE delivery and Open WebUI wiring in Compose.
+Tests cover real MCP sessions, HTTP transports and a controlled model endpoint.
+A run with configured provider credentials is still required to assess live answers.
 
-## 3. PDF и база статей
+Acceptance criterion: users receive cited answers and a clear indication when
+supporting sources are insufficient. The agent selects HyDE and web search as needed.
 
-- pypdf, текст по страницам, chunk metadata с названием / URL / страницей.
-- Загрузка выбранных статей из [каталога](paper-library.md), повторная индексация.
-- Общая векторная база внешних знаний с фильтрами pdf / web.
-- Получение конкретного фрагмента и проверяемые цитаты в ответах агента.
+## 3. PDFs and the paper library
 
-Критерий: вопросы о методах находят подтверждения в статье с номером страницы.
+- pypdf, text per page and chunk metadata with title / URL / page.
+- Ingestion and reindexing of papers from the [reading list](paper-library.md).
+- A shared external-knowledge vector database with pdf / web filters.
+- Retrieval of specific passages and verifiable citations in agent answers.
 
-## 4. Качество и сдача
+Acceptance criterion: questions about methods find supporting paper passages with
+page references.
 
-- Набор вопросов к нескольким онтологиям и статьям, проверки источников.
-- Сравнение BM25 / hybrid / HyDE; причины неудачных ответов.
-- Langfuse, обработка сбоев провайдеров, воспроизводимый запуск.
-- Инструкция демонстрации, архитектура, ограничения и сценарий защиты.
+## 4. Quality and project delivery
 
-Сроки зависят от доступа к моделям, оборудования для embeddings и требований
-к сдаче. Reasoner и полная поддержка семантики OWL не входят в этот MVP.
+- Questions covering multiple ontologies and papers, with source checks.
+- Compare BM25 / hybrid / HyDE and investigate unsuccessful answers.
+- Langfuse, provider failure handling and reproducible startup.
+- A demonstration guide, architecture, limitations and a project presentation scenario.
+
+Timing depends on model access, embedding hardware and delivery requirements.
+A reasoner and full OWL semantic support are outside this MVP.

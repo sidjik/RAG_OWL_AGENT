@@ -1,68 +1,68 @@
-# Поиск, Qdrant и HyDE
+# Retrieval, Qdrant and HyDE
 
-## Сущности онтологии
+## Ontology entities
 
-Индексируются именованные субъекты RDF-графа. Текст документа содержит короткое
-имя IRI, rdfs:label, skos:prefLabel / altLabel, rdfs:comment, skos:definition
-и DC/DCTerms description. Метки языков сохраняются в исходных тройках.
-Именованные объекты без исходящих троек в этот индекс пока не включаются.
+The index contains named subjects of the RDF graph. Each document includes the
+IRI local name, rdfs:label, skos:prefLabel / altLabel, rdfs:comment, skos:definition
+and DC/DCTerms description. Language tags are retained in the underlying triples.
+Named objects without outgoing triples are not currently included in this index.
 
-Токенизация выделяет Unicode-слова, приводит к casefold и добавляет части
-CamelCase: VectorDatabase → vectordatabase, vector, database. Это не перевод
-и не морфологический анализ. Query проходит ту же обработку; если слово уже
-пришло полностью в нижнем регистре, границы CamelCase восстановить нельзя.
+Tokenization extracts Unicode words, applies case folding and adds CamelCase
+components: VectorDatabase → vectordatabase, vector, database. It performs neither
+translation nor morphological analysis. Queries receive the same processing;
+CamelCase boundaries cannot be recovered from a word already supplied in lowercase.
 
-BM25 реализован через rank-bm25 BM25Plus, k1=1.2, b=0.75, delta=0.
-Нулевой delta убирает базовый балл для не совпавших документов; положительный
-IDF удобен для маленьких онтологий. Полное точное IRI добавляет 8, точное
-имя или label без учёта регистра — 4 (один бонус).
+BM25 uses rank-bm25 BM25Plus with k1=1.2, b=0.75 and delta=0.
+A zero delta removes the baseline score for documents without matching terms;
+positive IDF is useful for small ontologies. An exact full IRI match adds 8;
+a case-insensitive exact local-name or label match adds 4, as a single bonus.
 
-В hybrid-режиме Qdrant ищет cosine-соседей в той же онтологии и версии,
-с фильтром категории до ранжирования. До 50 кандидатов каждого канала
-объединяются RRF: сумма 1/(60 + rank), rank начинается с 1.
-Итоговый балл hybrid — RRF + бонус точного совпадения. Оценки BM25 и cosine
-отдельно возвращаются в scores; напрямую они не складываются.
-Неположительные cosine-совпадения отбрасываются. Порядок равных итоговых
-баллов определяется полным IRI. Число кандидатов hybrid ограничено;
-`total` относится к полученному списку, а не ко всем возможным соседям графа.
+In hybrid mode, Qdrant retrieves cosine neighbors within the same ontology and
+version, applying the category filter before ranking. Up to 50 candidates from
+each channel are combined through RRF: sum of 1/(60 + rank), with rank starting at 1.
+The final hybrid score is RRF plus the exact-match bonus. BM25 and cosine scores
+are returned separately in scores; their raw values are not added together.
+Non-positive cosine matches are discarded. Ties in the final score are broken
+by full IRI. Hybrid candidate counts are bounded; `total` refers to the returned
+candidate list, not every possible neighbor in the graph.
 
-Embeddings создаются адаптером LiteLLM или Sentence Transformers, нормализуются
-и хранятся в Qdrant. Пустые, нулевые, бесконечные векторы и несовместимая
-размерность отвергаются. Разные идентификаторы моделей используют разные
-коллекции. При изменении модели за тем же alias измените alias / model_id
-и перестройте индекс, даже если размерность прежняя.
+Embeddings are produced by a LiteLLM or Sentence Transformers adapter, normalized
+and stored in Qdrant. Empty vectors, zero vectors, non-finite values and incompatible
+dimensions are rejected. Different model identifiers use different collections.
+If the upstream model behind an alias changes, change the alias / model_id and
+rebuild the index, even when the vector dimensions remain the same.
 
-## Контекст графа
+## Graph context
 
-После поиска выбираются seed-сущности. BFS следует по исходящим и/или входящим
-рёбрам, включая BNode, но не превращает их в IRI. Тройки сохраняют направление
-и типы термов. Дубликаты и циклы не расширяют очередь бесконечно.
-Параметры глубины и бюджетов описаны в [MCP-контракте](mcp-tools.md).
-Обход не выполняет логический вывод.
+Search results provide seed entities. BFS follows outgoing and/or incoming edges,
+including BNode resources, while preserving their identity as blank nodes. Triples
+retain their orientation and term types. Deduplication and cycle protection keep
+the queue bounded. Depth and count budgets are described in the
+[MCP contract](mcp-tools.md). Traversal does not perform logical inference.
 
-## Внешние документы и HyDE
+## External documents and HyDE
 
-Knowledge MCP хранит внешние документы отдельно от ontology entities.
-Vector search использует обязательный workspace и опциональный source_type.
-Поисковый балл отражает близость, а не достоверность утверждения.
+Knowledge MCP stores external documents separately from ontology entities.
+Vector queries require a workspace and accept an optional source_type filter.
+A search score represents similarity, not the reliability of an assertion.
 
-HyDE выполняет цепочку:
+HyDE follows this sequence:
 
 ```text
-вопрос → LLM → гипотетический фрагмент → encoder → Qdrant → реальные фрагменты
+question → LLM → hypothetical passage → encoder → Qdrant → actual stored passages
 ```
 
-Гипотеза не индексируется и возвращается с hypothesis_is_evidence=false.
-Текущее поведение использует один гипотетический документ, без усреднения
-нескольких генераций. Результат нельзя считать автоматически более точным:
-потребуется сравнение vector / hybrid / HyDE на наборе вопросов.
-Метод: [Gao et al., ACL 2023](https://aclanthology.org/2023.acl-long.99/).
+The hypothesis is not indexed and is returned with hypothesis_is_evidence=false.
+The current implementation uses one hypothetical document, without averaging
+multiple generations. Improved accuracy is not assumed: vector / hybrid / HyDE
+retrieval still needs comparison on an evaluation question set.
+Method: [Gao et al., ACL 2023](https://aclanthology.org/2023.acl-long.99/).
 
-Web-search запрашивает у Tavily include_answer=false и include_raw_content=text.
-Полный извлечённый текст (до 60 000 символов с явным признаком усечения)
-разбивается на фрагменты до 1200 символов с перекрытием до 150 символов.
-Повторные URL канонизируются без fragment, дубли в одном ответе пропускаются.
-URL + workspace + chunk_index дают стабильный ID. Обновление переписывает
-фрагменты и удаляет оставшийся хвост прошлой версии. Это не транзакционная
-замена всего документа и пока не поддерживает несколько параллельных writers.
-Сохраняется SHA-256 индексированного текста, а не байтов исходной HTML-страницы.
+Web search calls Tavily with include_answer=false and include_raw_content=text.
+Extracted text is capped at 60,000 characters with an explicit truncation flag,
+then split into chunks of up to 1200 characters with overlap of up to 150 characters.
+URLs are canonicalized without fragments, and duplicates within one response are
+skipped. URL + workspace + chunk_index produce a stable ID. Updates overwrite
+chunks and remove any surplus chunks from the previous version. Replacement is
+not a document-wide transaction and does not yet support multiple concurrent writers.
+The stored SHA-256 covers the indexed text, not the original HTML bytes.

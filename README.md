@@ -1,35 +1,37 @@
-# OWL GraphRAG: Python, MCP и AI Agent
+# OWL GraphRAG: Python, MCP and AI Agent
 
-Система для вопросов на естественном языке к OWL-онтологиям и техническим
-источникам. Онтология подтверждает структуру и связи, статьи и веб-страницы
-помогают объяснить методы. Ответ должен ссылаться на фактически найденные данные.
+A system for answering natural-language questions about OWL ontologies and technical
+sources. The ontology provides evidence for structure and relationships; papers and
+web pages help explain methods. Answers should cite the data actually retrieved.
 
-Реализация написана на Python. Исходный код находится в `src/owl_rag/`.
+The implementation is written in Python. Source code lives in `src/owl_rag/`.
 
-## Состояние проекта
+## Project status
 
-| Возможность | Статус |
+| Capability | Status |
 | --- | --- |
-| RDF/XML, Turtle, N-Triples через RDFLib | Реализовано |
-| Несколько онтологий, явный `ontology_id`, SHA-256 файла | Реализовано; файлы выбираются при запуске |
-| Именованные классы, родители/дети, входящие/исходящие тройки | Реализовано |
-| BM25, поиск по IRI, именам, меткам и описаниям | Реализовано |
-| Qdrant + embeddings, объединение с BM25 через RRF | Реализовано; нужен настроенный encoder |
-| Обход графа с ограничениями и сохранением анонимных выражений | Реализовано |
-| OWL MCP, stdio и Streamable HTTP | Реализовано |
-| Knowledge MCP: vector search, HyDE, web-search → индексация | Реализовано; внешние вызовы требуют настройки провайдеров |
-| Загрузка PDF и ссылки на страницы | Следующая итерация |
-| LiteLLM, Qdrant и оба MCP-сервера в Compose | Реализовано; настройки из локального `.env` |
-| ReAct-агент и API для Open WebUI | Следующая итерация |
-| Langfuse, набор оценочных вопросов, демонстрация | Завершающая итерация |
-| Reasoner, проверка непротиворечивости, полноценный OWL 2 DL | Вне текущего MVP |
+| RDF/XML, Turtle and N-Triples through RDFLib | Implemented |
+| Multiple ontologies, explicit `ontology_id`, file SHA-256 | Implemented; files are selected at startup |
+| Named classes, parents/children, incoming/outgoing triples | Implemented |
+| BM25 and search by IRI, local name, labels and descriptions | Implemented |
+| Qdrant + embeddings, combined with BM25 through RRF | Implemented; requires a configured encoder |
+| Bounded graph traversal that preserves anonymous expressions | Implemented |
+| OWL MCP over stdio and Streamable HTTP | Implemented |
+| Knowledge MCP: vector search, HyDE, web search and indexing | Implemented; external calls require provider configuration |
+| PDF ingestion and page references | Next iteration |
+| LiteLLM, Qdrant and both MCP servers in Compose | Implemented; configured through a local `.env` |
+| LangGraph ReAct agent and chat API | Implemented; bounded MCP tool loop and source provenance |
+| Open WebUI in Compose | Configured; connects to the agent API |
+| Langfuse, evaluation questions and demonstration | Final iteration |
+| Reasoner, consistency checking and full OWL 2 DL support | Outside the current MVP |
 
-Это первая рабочая итерация Python-версии, а не готовый пользовательский чат.
+The current iteration includes a chat agent and Open WebUI integration. Provider
+credentials are required for live use; PDF ingestion and quality evaluation remain planned.
 
-## Быстрый старт
+## Quick start
 
-Нужны Python 3.11+ и [uv](https://docs.astral.sh/uv/).
-Команды выполняются из корня репозитория.
+Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
+Run commands from the repository root.
 
 ```bash
 uv sync --locked
@@ -41,26 +43,26 @@ uv run pytest -q
 uv run ruff check src tests
 ```
 
-Для проверок перед коммитом установите Git-хук:
+Install the Git hook to run checks before committing:
 
 ```bash
 uv run pre-commit install
 uv run pre-commit run --all-files
 ```
 
-Включены поиск секретов и приватных ключей, блокировка локальных `.env`,
-Ruff, MyPy, Bandit и Hadolint. Подробнее — [проверки разработки](docs/development.md).
+Checks include secret and private-key detection, blocking local `.env` files,
+Ruff, MyPy, Bandit and Hadolint. See the [development guide](docs/development.md).
 
-CLI выдаёт JSON. Для своей онтологии замените путь; `.owl` по умолчанию означает
-RDF/XML. Если файл содержит Turtle, укажите `--format turtle`.
+The CLI returns JSON. Replace the path to inspect your own ontology; `.owl`
+defaults to RDF/XML. For a file containing Turtle, pass `--format turtle`.
 
-Запуск OWL MCP без LLM и Qdrant, для клиента со stdio:
+Start OWL MCP over stdio without an LLM or Qdrant:
 
 ```bash
 uv run owl-mcp --ontology demo=examples/ontologies/minimal.owl
 ```
 
-Для HTTP и нескольких онтологий:
+For HTTP and multiple ontologies:
 
 ```bash
 uv run owl-mcp --transport streamable-http --port 8001 \
@@ -68,75 +70,75 @@ uv run owl-mcp --transport streamable-http --port 8001 \
   --ontology ai=examples/ontologies/search.owl
 ```
 
-Адрес: `http://127.0.0.1:8001/mcp`. Сервер ожидает MCP-клиента;
-открытие этого адреса браузером не является проверкой инструментов.
+Endpoint: `http://127.0.0.1:8001/mcp`. The server expects an MCP client;
+opening this URL in a browser does not test its tools.
 
-## Стек
+## Technology stack
 
-| Область | Библиотека / сервис | Причина выбора |
+| Area | Library / service | Rationale |
 | --- | --- | --- |
-| RDF / OWL | [RDFLib](https://rdflib.readthedocs.io/en/latest/) | RDF-граф, распространённые синтаксисы, URIRef / BNode / Literal |
-| MCP | [Официальный Python SDK, ветка 1.x](https://github.com/modelcontextprotocol/python-sdk/tree/v1.x) | Типизированные инструменты, stdio и Streamable HTTP; версия закреплена lock-файлом |
-| Текстовый поиск | [rank-bm25](https://github.com/dorianbrown/rank_bm25) | Прозрачный BM25 для небольших онтологий |
-| Векторная база | [Qdrant](https://qdrant.tech/documentation/) и `qdrant-client` | Хранение, cosine search, фильтры источников и версий |
-| Embeddings | LiteLLM HTTP adapter или [Sentence Transformers](https://sbert.net/) | Заменяемый encoder; локальная модель — необязательная зависимость |
-| HyDE | LLM через LiteLLM + Qdrant | Гипотетический текст используется только как поисковый запрос |
-| Web-search | [Tavily Search API](https://docs.tavily.com/documentation/api-reference/endpoint/search) через HTTPX | Поисковые результаты и извлечённый текст страниц |
-| Агент | [LangGraph](https://docs.langchain.com/oss/python/langgraph/overview), запланирован | Управляемый цикл вызовов инструментов с пределом шагов |
-| API / UI | FastAPI и Open WebUI, запланированы | HTTP-интерфейс общения с агентом |
-| PDF | [pypdf](https://pypdf.readthedocs.io/), запланирован | Текст по страницам и проверяемые ссылки; OCR отдельно |
-| Проверки | pytest, Ruff | Поведение графа, поиск, Qdrant и протокол MCP |
+| RDF / OWL | [RDFLib](https://rdflib.readthedocs.io/en/latest/) | RDF graphs, common syntaxes, URIRef / BNode / Literal |
+| MCP | [Official Python SDK, 1.x branch](https://github.com/modelcontextprotocol/python-sdk/tree/v1.x) | Typed tools, stdio and Streamable HTTP; version pinned in the lock file |
+| Text search | [rank-bm25](https://github.com/dorianbrown/rank_bm25) | Transparent BM25 implementation for small ontologies |
+| Vector database | [Qdrant](https://qdrant.tech/documentation/) and `qdrant-client` | Storage, cosine search, source and version filters |
+| Embeddings | LiteLLM HTTP adapter or [Sentence Transformers](https://sbert.net/) | Replaceable encoder; local models are an optional dependency |
+| HyDE | LLM through LiteLLM + Qdrant | Hypothetical text is used only as a search query |
+| Web search | [Tavily Search API](https://docs.tavily.com/documentation/api-reference/endpoint/search) through HTTPX | Search results and extracted page text |
+| Agent | [LangGraph](https://docs.langchain.com/oss/python/langgraph/overview) | Controlled tool-calling loop with a step limit |
+| API / UI | FastAPI and Open WebUI | HTTP interface for conversations with the agent |
+| PDF | [pypdf](https://pypdf.readthedocs.io/), planned | Text per page and verifiable references; OCR is separate |
+| Validation | pytest, Ruff | Graph behavior, retrieval, Qdrant and the MCP protocol |
 
-`uv.lock` фиксирует зависимости. Тяжёлые модели и ключи не нужны для лексического
-поиска и базовой навигации.
+`uv.lock` pins dependencies. Lexical search and basic navigation require neither
+large model downloads nor API keys.
 
-## Целевая архитектура
+## Target architecture
 
 ```mermaid
 flowchart TB
-    user[Пользователь] --> ui[Open WebUI / план]
-    ui --> agent[Python Agent / LangGraph / план]
+    user[User] --> ui[Open WebUI]
+    ui --> agent[Python Agent / LangGraph]
     agent --> llm[LiteLLM / LLM Providers]
     agent --> owl[OWL MCP / Python]
     agent --> knowledge[Knowledge MCP / Python]
     owl --> lexical[BM25]
-    owl --> traversal[Обход RDF-графа]
-    owl --> entities[Qdrant / сущности онтологий]
+    owl --> traversal[RDF graph traversal]
+    owl --> entities[Qdrant / ontology entities]
     files[OWL / Turtle / N-Triples] --> owl
-    knowledge --> chunks[Qdrant / внешние документы]
-    knowledge --> hyde[HyDE / синтетический поисковый текст]
+    knowledge --> chunks[Qdrant / external documents]
+    knowledge --> hyde[HyDE / synthetic query text]
     hyde --> llm
     hyde --> chunks
-    knowledge --> web[Tavily / извлечение страниц]
+    knowledge --> web[Tavily / page extraction]
     web --> chunks
-    pdf[PDF / план] -.-> chunks
-    agent -.-> traces[Langfuse / план]
+    pdf[PDF / planned] -.-> chunks
+    agent -.-> traces[Langfuse / planned]
 ```
 
-OWL MCP не зависит от агента, LangGraph и модели генерации. Его векторный поиск
-подключается отдельно. Knowledge MCP содержит инструменты, которым нужны внешние
-модели и web-search. Агент будет обращаться к обоим серверам по MCP.
+OWL MCP is independent of the agent, LangGraph and text-generation models.
+Its vector search is configured separately. Knowledge MCP contains tools that
+require external models and web search. The agent accesses both servers via MCP.
 
-### Что хранится в Qdrant
+### What Qdrant stores
 
-- `owl_entities_<model hash>`: текстовые представления именованных субъектов;
-  фильтры `ontology_id`, `version`, `kinds`. Сам RDF-граф хранится в RDFLib.
-- `knowledge_chunks_<model hash>`: фрагменты веб-страниц, позднее PDF;
-  фильтры `workspace`, `source_type`, `document_id`.
-- Каждая коллекция связана с идентификатором encoder; размерность проверяется.
-  При смене модели или её версии нужен новый идентификатор и переиндексация.
-- Веб-фрагменты сохраняют URL, заголовок, SHA-256 индексированного текста,
-  дату извлечения, исходный поисковый запрос и индекс фрагмента.
+- `owl_entities_<model hash>`: textual representations of named subjects,
+  filtered by `ontology_id`, `version` and `kinds`. RDFLib holds the RDF graph itself.
+- `knowledge_chunks_<model hash>`: web page chunks, with PDF chunks planned,
+  filtered by `workspace`, `source_type` and `document_id`.
+- Each collection is tied to an encoder identifier, and vector dimensions are checked.
+  Changing a model or its version requires a new identifier and reindexing.
+- Web chunks retain the URL, title, SHA-256 of the indexed text, retrieval time,
+  original search query and chunk index.
 
-`workspace` изолирует выборку документов, но не заменяет авторизацию.
-Текущий Compose предназначен для локальной разработки и публикует порты на localhost.
+`workspace` isolates document queries but does not provide authorization.
+The current Compose setup is intended for local development and binds ports to localhost.
 
-## Qdrant, embeddings и инструменты исследования
+## Qdrant, embeddings and research tools
 
-Готовы [compose.yaml](compose.yaml), [.env.example](.env.example) и
-[конфигурация LiteLLM](deploy/litellm/config.yaml). Дополни свой локальный `.env`
-именами upstream-моделей, их ключами и ключом Tavily. Пошаговое описание:
-[запуск Docker](docs/docker.md).
+The repository includes [compose.yaml](compose.yaml), [.env.example](.env.example)
+and the [LiteLLM configuration](deploy/litellm/config.yaml). Add upstream model names,
+provider keys and a Tavily key to your local `.env`. See the
+[Docker setup guide](docs/docker.md) for detailed instructions.
 
 ```bash
 docker compose config --quiet
@@ -144,28 +146,28 @@ docker compose up -d --build
 docker compose ps
 ```
 
-Запускаются LiteLLM, Qdrant, OWL MCP и Knowledge MCP. Chat-модель доступна через
-alias `chat`, embedding-модель — через `embeddings`. HyDE использует `chat`.
-Агент и Open WebUI пока не реализованы и не входят в этот Compose.
+This starts LiteLLM, Qdrant, both MCP servers, the agent and Open WebUI. The chat model is exposed
+as `chat`, and the embedding model as `embeddings`. HyDE uses `chat`.
+Open `http://localhost:3000`, create an Open WebUI account, select `owl-agent`,
+and ask a question. See the [agent guide](docs/agent.md) for API details and limits.
 
 LiteLLM API: `http://localhost:4000/v1`, OWL MCP: `http://localhost:8001/mcp`,
-Knowledge MCP: `http://localhost:8002/mcp`. Внутри Docker адреса сервисов
-подставляются автоматически. Ключи провайдеров получает LiteLLM; MCP-сервисы
-получают только ключ прокси.
+Knowledge MCP: `http://localhost:8002/mcp`, agent API: `http://localhost:8000/v1`.
+Compose supplies internal service URLs
+automatically. LiteLLM receives provider keys; MCP services receive the proxy key.
 
-Для Python-команд на хосте `.env` загружается явно:
+Load `.env` explicitly when running Python commands on the host:
 
 ```bash
 uv run --env-file .env owl-inspect examples/ontologies/search.owl \
   --query "semantic retrieval" --mode hybrid
 ```
 
-Первое включение векторного индекса вызывает embedding API. Без
-`TAVILY_API_KEY` Knowledge MCP запускается, но инструмент web-search возвращает
-ошибку настройки. Генерация HyDE и поиск в интернете могут тарифицироваться
-соответствующими провайдерами.
+Creating a vector index calls the embedding API. Knowledge MCP starts without
+`TAVILY_API_KEY`, but its web search tool then reports a configuration error.
+HyDE generation and web search may incur charges from their respective providers.
 
-Локальный encoder подключается явно:
+To use a local encoder, configure it explicitly:
 
 ```bash
 uv sync --locked --extra semantic
@@ -173,94 +175,100 @@ export EMBEDDING_BACKEND=sentence-transformers
 export EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 ```
 
-При первом использовании Sentence Transformers загружает модель. Выбор
-embedding-модели нужно проверить на реальных русских и английских вопросах;
-само наличие векторов не гарантирует качество поиска.
+Sentence Transformers downloads the model on first use. Evaluate the embedding
+model on real Russian and English questions; vector availability alone does not
+establish retrieval quality.
 
-## Поток обработки запроса
+## Query processing flow
 
-1. Агент принимает вопрос и выбранную онтологию; агент пока в плане.
-2. Через `search_entities` находит кандидатов: BM25 либо BM25 + Qdrant с RRF.
-3. Через `retrieve_context` получает ограниченный фрагмент исходного графа;
-   при необходимости уточняет сущность и её связи отдельными MCP-вызовами.
-4. Для объяснений методов вызывает `search_knowledge`. При слабом совпадении
-   может выбрать `hyde_search`: LLM генерирует гипотетический документ,
-   encoder преобразует его в вектор, Qdrant возвращает реальные фрагменты.
-5. Если источников в базе мало, вызывает `web_search_and_index`. Tavily ищет
-   страницы, извлечённый текст делится на фрагменты и записывается в Qdrant;
-   затем информация доступна последующим поисковым запросам.
-6. Агент формирует ответ по найденным источникам с полными IRI / URL и
-   версиями. Синтетический текст HyDE не может быть подтверждением ответа.
+1. The agent validates the question, binds the selected ontology and retrieves an
+   initial bounded graph context before asking the model to choose further tools.
+2. It finds candidates through `search_entities`, using BM25 or BM25 + Qdrant with RRF.
+3. It requests a bounded fragment of the asserted graph through `retrieve_context`,
+   then uses additional MCP calls to inspect entities and relationships as needed.
+4. To explain methods, it calls `search_knowledge`. For weak matches, it may choose
+   `hyde_search`: an LLM generates a hypothetical document, the encoder embeds it,
+   and Qdrant returns actual stored passages.
+5. When the knowledge base lacks sources, it calls `web_search_and_index`. Tavily
+   finds pages; extracted text is chunked and stored in Qdrant for subsequent searches.
+6. The agent produces an answer grounded in retrieved sources, with full IRIs / URLs
+   and versions. Synthetic HyDE text cannot serve as evidence for an answer.
 
-HyDE — поисковое расширение, а не проверка истинности. Метод описан в
-[статье Gao et al.](https://aclanthology.org/2023.acl-long.99/).
+HyDE expands a search query; it does not verify factual accuracy. The method is
+presented in the [paper by Gao et al.](https://aclanthology.org/2023.acl-long.99/).
 
-Результат web-search не становится аксиомой OWL. Страницы остаются внешними
-непроверенными источниками. Сниппеты и готовые ответы поискового провайдера
-не сохраняются как полный текст страницы. При отсутствии извлечённого текста
-документ пропускается с объяснением.
+Web search results do not become OWL axioms. Pages remain external, unverified
+sources. Search snippets and provider-generated answers are not stored as full
+page text. Pages without extracted text are skipped with an explanation.
 
-## Границы поддержки OWL
+## OWL support boundaries
 
-- Читаются **RDF/XML, Turtle, N-Triples**. OWL/XML, Manchester и Functional Syntax
-  не поддерживаются. Расширение файла не определяет его синтаксис.
-- Сохраняются RDF-тройки: IRI, анонимные узлы, литералы, типы и языки.
-  RDFLib может нормализовать лексическую запись типизированного литерала;
-  версия документа вычисляется по исходным байтам.
-- `list_classes` показывает явные `rdf:type owl:Class`. Поиск также распознаёт
-  явно объявленные `rdfs:Class`. Экземпляры в фильтре `individual` требуют
-  явного `owl:NamedIndividual`; вывод типов пока не выполняется.
-- Родители и дети — прямые именованные связи `rdfs:subClassOf`.
-- Анонимные ограничения доступны как связанные исходные тройки; их наличие
-  в выдаче не означает полный семантический разбор OWL-выражения.
-- `owl:imports` сохраняется, импортируемые документы автоматически не скачиваются.
-- Reasoner отсутствует. `A subClassOf B`, `B subClassOf C` не добавляют новую
-  тройку `A subClassOf C`. Обход графа сохраняет исходные утверждения.
-- Отсутствие факта не означает его ложность: учитывается открытый мир OWL.
-  Полная поддержка OWL 2 DL / Full и профилей EL / QL / RL не заявляется.
+- Supported input formats are **RDF/XML, Turtle and N-Triples**. OWL/XML,
+  Manchester Syntax and Functional Syntax are not supported. A file extension
+  does not determine its actual syntax.
+- RDF triples retain IRIs, blank nodes, literals, datatypes and languages.
+  RDFLib may normalize the lexical form of typed literals; document versions
+  are computed from the original bytes.
+- `list_classes` returns explicit `rdf:type owl:Class` declarations. Search also
+  recognizes explicitly declared `rdfs:Class` subjects. The `individual` filter
+  requires an explicit `owl:NamedIndividual`; type inference is not implemented.
+- Parents and children are direct named `rdfs:subClassOf` relationships.
+- Anonymous restrictions remain accessible as connected RDF triples. Returning
+  those triples does not imply full semantic interpretation of an OWL expression.
+- `owl:imports` is preserved, but imported documents are not fetched automatically.
+- No reasoner is connected. `A subClassOf B` and `B subClassOf C` do not add a new
+  `A subClassOf C` triple. Traversal preserves asserted statements.
+- A missing assertion does not imply that it is false: OWL uses the open-world
+  assumption. Full OWL 2 DL / Full and EL / QL / RL profile support is not claimed.
 
-Обход ограничен глубиной 0–4, количеством ресурсных узлов и троек; литералы
-сохраняются в тройках, но не расширяются. Служебные узлы RDF/RDFS/OWL/XSD/SKOS
-включаются как конечные, чтобы общий `owl:Class` не связывал все классы в контекст.
-Достижение глубины означает заданную область обхода, а не полноту ответа.
-При исчерпании бюджетов `truncated=true` и указана причина.
-Метки анонимных узлов действуют только в текущей загрузке графа.
+Traversal is bounded by depth 0–4, resource node count and statement count.
+Literals remain in statements but are not expanded. RDF/RDFS/OWL/XSD/SKOS vocabulary
+nodes are included as terminal nodes so a shared `owl:Class` does not connect every
+class into the context. Reaching the depth limit defines the requested traversal
+scope; it does not establish answer completeness. Exhausting a count budget sets
+`truncated=true` and reports the reason. Blank-node labels are scoped to the current
+graph load.
 
-## Структура и чтение кода
+## Repository structure and code tour
 
 ```text
 src/owl_rag/
-  ontology.py          # загрузка и прямые операции RDF
-  models.py            # JSON-термы и источники
-  search.py            # BM25, точные совпадения, RRF
-  vector_store.py      # Qdrant, векторы и фильтры
-  context.py           # ограниченный BFS по RDF
-  service.py           # операции над реестром онтологий
+  ontology.py          # RDF loading and direct graph operations
+  models.py            # JSON terms and source provenance
+  search.py            # BM25, exact matches and RRF
+  vector_store.py      # Qdrant, vectors and filters
+  context.py           # Bounded BFS over RDF
+  service.py           # Ontology registry operations
   mcp_server.py        # OWL MCP
-  knowledge.py         # фрагменты документов, HyDE, пополнение базы
-  web_search.py        # Tavily и URL источников
-  providers.py         # HTTP-адаптеры LiteLLM
+  knowledge.py         # Document chunks, HyDE and knowledge ingestion
+  web_search.py        # Tavily and source URLs
+  providers.py         # LiteLLM HTTP adapters
   knowledge_server.py  # Knowledge MCP
-  config.py            # настройки через окружение
-  cli.py               # локальная проверка без агента
+  config.py            # Environment-based configuration
+  cli.py               # Local inspection without an agent
+  agent_settings.py    # Agent endpoints and request budgets
+  agent_mcp.py         # MCP discovery and scope binding
+  agent.py             # LangGraph tool loop and source registry
+  agent_api.py         # Chat API and SSE responses
 ```
 
-См. [карту кода](docs/code-tour.md), [контракт MCP](docs/mcp-tools.md),
-[поиск](docs/search.md), [план PDF-базы](docs/paper-library.md) и
-[итерации разработки](docs/roadmap.md).
+See the [code tour](docs/code-tour.md), [MCP contract](docs/mcp-tools.md),
+[retrieval guide](docs/search.md), [PDF library plan](docs/paper-library.md) and
+[development roadmap](docs/roadmap.md).
 
-## Проверки и ограничения первой итерации
+## Validation and current limitations
 
-Тесты используют реальный RDFLib, Qdrant Client в локальном режиме и stdio MCP.
-Модели и HTTP API заменены контролируемыми тестовыми адаптерами; платные API
-без ключей не вызываются. Это проверяет интеграцию, а не качество реальных
-embeddings, генерации HyDE или web-search.
+Tests use real RDFLib, Qdrant Client in local mode and stdio MCP. Models and HTTP
+APIs are replaced with controlled test adapters; paid APIs are not called without
+keys. The agent is also tested over actual HTTP MCP transports with a controlled model
+endpoint. These tests validate integration rather than real-provider quality,
+embedding relevance, HyDE accuracy or factual entailment of model answers.
 
-Обновление URL идемпотентно по идентификаторам фрагментов. После успешной записи
-удаляется хвост от более длинной прошлой версии. Обновление многих фрагментов
-не является одной транзакцией; пока предполагается один пишущий Knowledge MCP.
-Старые версии онтологий могут оставаться в Qdrant, но поиск фильтрует текущую
-версию. Очистка старых индексов, auth, очередь загрузок и автоматическое
-обновление веб-источников пока не реализованы.
+URL updates are idempotent by chunk identifier. After a successful write, surplus
+chunks from a longer previous version are removed. Updating multiple chunks is not
+a single transaction; the current setup assumes one Knowledge MCP writer. Older
+ontology versions may remain in Qdrant, but searches filter by the active version.
+Old-index cleanup, authorization, ingestion queues and automatic web source refresh
+are not implemented yet.
 
-`make demo`, `make test`, `make lint` — короткие варианты Python-команд.
+`make demo`, `make test` and `make lint` are shortcuts for the Python commands.
